@@ -4,67 +4,55 @@ const RotEncoder = require('./RotEncoder');
 const SbsEncoder = require('./SbsEncoder');
 
 async function main() {
-    const [operation, encoderType, key, basename] = process.argv.slice(2);
+    try {
+        const [operation, encoderType, key, basename] = process.argv.slice(2);
+        let encoder;
 
-    // Create encoder instance
-    let encoder;
-    switch (encoderType.toLowerCase()) {
-        case 'rotencoder':
-            encoder = new RotEncoder(key);
-            break;
-        case 'sbsencoder':
-            encoder = new SbsEncoder(key);
-            break;
-        default:
-            console.log(`Unknown encoder type: ${encoderType}`);
-            return;
-    }
+        // Instantiate the correct encoder based on command-line arguments
+        switch (encoderType.toLowerCase()) {
+            case 'rotencoder':
+                encoder = new RotEncoder(key); // This will throw if `key` is invalid
+                break;
+            case 'sbsencoder':
+                encoder = new SbsEncoder(key); // This will throw if `key` is invalid
+                break;
+            default:
+                throw `Unknown encoder type ${encoderType}`;
+        }
 
-    // Determine if file-based or standard I/O is used
-    if (basename) {
-        const inputFilename = `${basename}.in`;
-        const outputFilename = `${basename}.out`;
+        // Check for valid operation and read/write data accordingly
+        if (operation !== 'E' && operation !== 'D') {
+            throw 'Invalid operation. Use E for Encode or D for Decode.';
+        }
 
-        // Set up file read and write streams
-        const inputStream = fs.createReadStream(inputFilename, 'utf8');
-        const outputStream = fs.createWriteStream(outputFilename, { flags: 'w' });
+        const encodeOrDecode = operation === 'E' ? 'encode' : 'decode';
 
-        // Set up readline interface for event-based reading
-        const rl = readline.createInterface({
-            input: inputStream,
-            output: outputStream,
-            terminal: false
-        });
+        if (basename) {
+            // If basename is provided, use file I/O
+            const inputFile = `${basename}.in`;
+            const outputFile = `${basename}.out`;
+            const fileStream = fs.createReadStream(inputFile);
+            const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+            const outputStream = fs.createWriteStream(outputFile);
 
-        // Process each line from the input file
-        rl.on('line', (line) => {
-            const result = operation === 'E' ? encoder.encode(line) : encoder.decode(line);
-            outputStream.write(result + '\n');
-        });
+            for await (const line of rl) {
+                outputStream.write(encoder[encodeOrDecode](line) + '\n');
+            }
 
-        // Close output stream when reading is complete
-        rl.on('close', () => {
-            outputStream.end();
-            console.log(`Processed data written to ${outputFilename}`);
-        });
-    } else {
-        // Standard I/O for interactive mode
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-
-        // Process each line entered in standard input
-        rl.on('line', (line) => {
-            if (!line) return rl.close();
-            const result = operation === 'E' ? encoder.encode(line) : encoder.decode(line);
-            console.log(result);
-        });
-
-        // Close input when done
-        rl.on('close', () => {
-            console.log('Done processing.');
-        });
+            outputStream.close();
+        } else {
+            // Standard I/O (Interactive Mode)
+            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+            rl.on('line', (line) => {
+                if (line) {
+                    console.log(encoder[encodeOrDecode](line));
+                } else {
+                    rl.close();
+                }
+            });
+        }
+    } catch (err) {
+        console.log(err); // Catch and log any errors thrown
     }
 }
 
