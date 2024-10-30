@@ -1,44 +1,26 @@
 function SbsEncoder(key) {
-   // Process the key into a map for lookups in the constructor
-   this.map = this._createMap(key);
-   this.reverseMap = this._createReverseMap(this.map);  // For decoding
+   this.map = {};
+   this.reverseMap = {};
+
+   // Set up encoding and decoding maps based on the key
+   key.split(',').forEach(pair => {
+       const [from, to] = pair;
+       if (from && to && /[a-zA-Z]/.test(from) && /[a-zA-Z]/.test(to)) {
+           this.map[from] = to;
+           this.reverseMap[to] = from;
+       } else {
+           throw `Bad code pair: ${pair}`;
+       }
+   });
 }
 
-// Encodes the input string using substitution
+// Encode and decode as one-liners
 SbsEncoder.prototype.encode = function(str) {
    return str.split('').map(char => this.map[char] || char).join('');
 };
 
-// Decodes the input string using the reverse substitution map
 SbsEncoder.prototype.decode = function(str) {
    return str.split('').map(char => this.reverseMap[char] || char).join('');
 };
 
-//Creates map from the key for substitution using split and regex
-SbsEncoder.prototype._createMap = function(key) {
-   const map = {};
-   key.split(',').forEach(pair => {
-      if(pair.length !== 2 || !/^[a-zA-Z]{2}$/.test(pair)){
-         throw `Bad code pair: ${pair}`;
-      }
-       const [from, to] = pair.split('');  // Split the pair into two characters
-       map[from] = to;
-       if (/[A-Z]/.test(from)) {
-           map[from.toUpperCase()] = to.toUpperCase();
-      }
-   });
-   return map;
-};
-
-// Creates a reverse map for decoding purposes
-SbsEncoder.prototype._createReverseMap = function(map) {
-   const reverseMap = {};
-   Object.keys(map).forEach(from => {
-       const to = map[from];
-       reverseMap[to] = from;  // Reverse the mapping
-   });
-   return reverseMap;
-};
-
-// Exporting using Node.js common module system
 module.exports = SbsEncoder;
