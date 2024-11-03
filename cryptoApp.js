@@ -1,74 +1,48 @@
+// CryptoApp.js
+
+const rls = require('readline-sync');
+const encoders = require('./Encoders'); // Import the single encoders object
+const CAppException = require('./CAppException');
 const fs = require('fs');
-const rls = require('readline');
-const RotEncoder = require('./RotEncoder');
-const SbsEncoder = require('./SbsEncoder');
-const VigenereEncoder = require('./VigenereEncoder');
 
-async function main() {
+function main() {
+    const [operation, encoderType, key, basename] = process.argv.slice(2);
+    let encoder;
+
     try {
-        const [operation, encoderType, key, basename] = process.argv.slice(2);
-        if (!operation || !encoderType || !key) {
-            throw 'Usage: crypto algorithm key [basename]';
+        // Determine the correct encoder class from encoders object
+        const EncoderClass = encoders[encoderType];
+        if (!EncoderClass) {
+            throw new CAppException(`Unknown encoder type: ${encoderType}`);
         }
 
-        let encoder;
-
-        // Instantiate the correct encoder based on command-line arguments
-        switch (encoderType.toLowerCase()) {
-            case 'rotencoder':
-                if (isNaN(parseInt(key)) || parseInt(key) <= 0) {
-                    throw `Bad offset ${key}`;
-                }
-                encoder = new RotEncoder(key);
-                break;
-            case 'sbsencoder':
-                encoder = new SbsEncoder(key);
-                break;
-            case 'vigenereencoder':
-                encoder = new VigenereEncoder(key);
-                break;
-            default:
-                throw `Unknown encoder type ${encoderType}`;
+        // Attempt to construct the encoder with the given key
+        try {
+            encoder = new EncoderClass(key);
+        } catch (error) {
+            throw new CAppException(`Problem constructing ${encoderType}`);
         }
 
-        // Set up file-based I/O or standard input/output as required
+        // Handle file-based or standard I/O
         if (basename) {
-            const inputFile = `${basename}.in`;
-            const outputFile = `${basename}.out`;
-
-            const inputStream = fs.createReadStream(inputFile, 'utf8');
-            const outputStream = fs.createWriteStream(outputFile, 'utf8');
-
-            const rl = rls.createInterface({
-                input: inputStream,
-                output: outputStream
-            });
-
-            rl.on('line', (line) => {
-                const result = operation === 'E' ? encoder.encode(line) : encoder.decode(line);
-                outputStream.write(result + '\n');
-            });
-
-            rl.on('close', () => {
-                outputStream.end();
-                console.log(`Output written to ${outputFile}`);
-            });
+            const input = fs.readFileSync(`${basename}.in`, 'utf-8');
+            const output = operation === 'E' ? encoder.encode(input) : encoder.decode(input);
+            fs.writeFileSync(`${basename}.out`, output);
         } else {
-            // Standard I/O
-            const rl = rls.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-                terminal: false
-            });
-
-            rl.on('line', (line) => {
-                const result = operation === 'E' ? encoder.encode(line) : encoder.decode(line);
-                console.log(result);
-            });
+            // Standard input/output handling
+            const action = operation === 'E' ? 'encode' : 'decode';
+            while (true) {
+                const line = rls.question('');
+                if (!line) break;
+                console.log(encoder[action](line));
+            }
         }
-
     } catch (error) {
-        console.log(error);
+        if (error instanceof CAppException) {
+            console.log(error.message);
+        } else {
+            console.error('Unexpected error:', error);
+        }
     }
 }
 
