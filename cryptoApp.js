@@ -1,47 +1,50 @@
-// CryptoApp.js
+const encoders = require('./Encoders');
 
-const rls = require('readline-sync');
-const encoders = require('./Encoders'); // Import the single encoders object
-const CAppException = require('./CAppException');
-const fs = require('fs');
+class CAppException {
+    constructor(message) {
+        this.message = message;
+    }
+}
 
 function main() {
-    const [operation, encoderType, key, basename] = process.argv.slice(2);
-    let encoder;
+    const [operation, encoderTypeInput, key, basename] = process.argv.slice(2);
+    let encoderType = encoderTypeInput;  // Define encoderType in outer scope
 
     try {
-        // Determine the correct encoder class from encoders object
-        const EncoderClass = encoders[encoderType];
-        if (!EncoderClass) {
-            throw new CAppException(`Unknown encoder type: ${encoderType}`);
+        // Validate operation
+        if (operation !== 'E' && operation !== 'D') {
+            throw new CAppException(`Invalid operation.
+                Use E for Encode or D for Decode.`);
         }
 
-        // Attempt to construct the encoder with the given key
-        try {
-            encoder = new EncoderClass(key);
-        } catch (error) {
-            throw new CAppException(`Problem constructing ${encoderType}`);
+        // Validate encoder type and construct encoder
+        const encoder = encoders[encoderType]?.(key);
+        if (!encoder) {
+            throw new CAppException(`Unknown encoder type ${encoderType}`);
         }
 
-        // Handle file-based or standard I/O
+        // Input/output handling based on basename
         if (basename) {
+            const fs = require('fs');
             const input = fs.readFileSync(`${basename}.in`, 'utf-8');
-            const output = operation === 'E' ? encoder.encode(input) : encoder.decode(input);
+            const output = (operation === 'E') ? encoder.encode(input) :
+             encoder.decode(input);
             fs.writeFileSync(`${basename}.out`, output);
         } else {
-            // Standard input/output handling
-            const action = operation === 'E' ? 'encode' : 'decode';
-            while (true) {
-                const line = rls.question('');
-                if (!line) break;
-                console.log(encoder[action](line));
-            }
+            const readline = require('readline');
+            const rl = readline.createInterface({ input: process.stdin,
+                output: process.stdout });
+
+            rl.on('line', (line) => {
+                console.log((operation === 'E') ? encoder.encode(line) :
+                 encoder.decode(line));
+            });
         }
-    } catch (error) {
-        if (error instanceof CAppException) {
-            console.log(error.message);
+    } catch (e) {
+        if (e instanceof CAppException) {
+            console.log(e.message);
         } else {
-            console.error('Unexpected error:', error);
+            console.log(`Problem constructing ${encoderType}: ${e}`);
         }
     }
 }

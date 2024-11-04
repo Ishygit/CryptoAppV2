@@ -1,26 +1,32 @@
-function SbsEncoder(key) {
-   this.map = {};
-   this.reverseMap = {};
+function* SbsEncoder(key) {
+    const map = createMap(key);
+    const reverseMap = createReverseMap(map);
 
-   // Set up encoding and decoding maps based on the key
-   key.split(',').forEach(pair => {
-       const [from, to] = pair;
-       if (from && to && /[a-zA-Z]/.test(from) && /[a-zA-Z]/.test(to)) {
-           this.map[from] = to;
-           this.reverseMap[to] = from;
-       } else {
-           throw `Bad code pair: ${pair}`;
-       }
-   });
+    yield {
+        encode: (str) => str.split('').map(char => map[char] || char).join(''),
+        decode: (str) => str.split('').map(char => reverseMap[char] 
+            || char).join('')
+    };
+
+    function createMap(key) {
+        const map = {};
+        key.split(',').forEach(pair => {
+            const [from, to] = pair.split('');
+            if (from && to) {
+                map[from] = to;
+            }
+        });
+        return map;
+    }
+
+    function createReverseMap(map) {
+        const reverseMap = {};
+        Object.keys(map).forEach(from => {
+            const to = map[from];
+            reverseMap[to] = from;
+        });
+        return reverseMap;
+    }
 }
-
-// Encode and decode as one-liners
-SbsEncoder.prototype.encode = function(str) {
-   return str.split('').map(char => this.map[char] || char).join('');
-};
-
-SbsEncoder.prototype.decode = function(str) {
-   return str.split('').map(char => this.reverseMap[char] || char).join('');
-};
 
 module.exports = SbsEncoder;

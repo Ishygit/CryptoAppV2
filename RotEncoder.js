@@ -1,46 +1,31 @@
-function RotEncoder(key) {
-   // Parse the key for rotation in the constructor
+function* RotEncoder(key) {
    const offset = parseInt(key, 10);
-   if(isNaN(offset) || offset <= 0){
-      throw `Bad offset ${key}`;
-   }
+   if (isNaN(offset) || offset <= 0) throw `Bad offset ${key}`;
 
-   this.key = offset;
+// Constants for ASCII values of uppercase and lowercase letters
+   const UPPERCASE_A = 65;
+   const UPPERCASE_Z = 90;
+   const LOWERCASE_A = 97;
+   const LOWERCASE_Z = 122;
+
+   yield {
+       encode: (str) => str.split('').map(char => shiftChar(char, offset))
+       .join(''),
+       decode: (str) => str.split('').map(char => shiftChar(char, -offset))
+       .join('')
+   };
+
+   function shiftChar(char, shiftAmount) {
+       const charCode = char.charCodeAt(0);
+       if (charCode >= UPPERCASE_A && charCode <= UPPERCASE_Z) {
+           return String.fromCharCode((charCode - UPPERCASE_A + shiftAmount
+             + 26) % 26 + UPPERCASE_A);
+       } else if (charCode >= LOWERCASE_A && charCode <= LOWERCASE_Z) {
+           return String.fromCharCode((charCode - LOWERCASE_A + shiftAmount
+             + 26) % 26 + LOWERCASE_A);
+       }
+       return char; // Non-alphabet characters remain unchanged
+   }
 }
 
-// Constants for character ranges
-const UPPER_A = 'A'.charCodeAt(0);
-const LOWER_A = 'a'.charCodeAt(0);
-const MAXCHAR = 26;
-
-// Encodes the input string by shifting each character
-RotEncoder.prototype.encode = function(str) {
-   return str.split('').map(char => this._shift(char, this.key)).join('');
-};
-
-// Decodes the input string by reversing the shift
-RotEncoder.prototype.decode = function(str) {
-   return str.split('').map(char => this._shift(char, -this.key)).join('');
-};
-
-// Helper function to shift characters based on the key
-RotEncoder.prototype._shift = function(char, shiftAmount) {
-   const charCode = char.charCodeAt(0);
-
-   // Check if character is uppercase or lowercase using regex
-   const isUpperCase = /[A-Z]/.test(char);
-   const isLowerCase = /[a-z]/.test(char);
-
-   if (isUpperCase) {
-      return String.fromCharCode(((charCode - UPPER_A + shiftAmount + MAXCHAR) 
-       % MAXCHAR) + UPPER_A);
-   } else if (isLowerCase) {
-      return String.fromCharCode(((charCode - LOWER_A + shiftAmount + MAXCHAR) 
-       % MAXCHAR) + LOWER_A);
-   }
-   // Non-alphabetic characters remain unchanged
-   return char;
-};
-
-// Export using Node.js common module system
 module.exports = RotEncoder;
