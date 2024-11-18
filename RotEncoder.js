@@ -7,6 +7,7 @@ function* RotEncoder(key) {
    const UPPERCASE_Z = 90;
    const LOWERCASE_A = 97;
    const LOWERCASE_Z = 122;
+   const MAXCHAR = 26;
 
    yield {
        encode: (str) => str.split('').map(char => shiftChar(char, offset))
@@ -19,10 +20,10 @@ function* RotEncoder(key) {
        const charCode = char.charCodeAt(0);
        if (charCode >= UPPERCASE_A && charCode <= UPPERCASE_Z) {
            return String.fromCharCode((charCode - UPPERCASE_A + shiftAmount
-             + 26) % 26 + UPPERCASE_A);
+             + MAXCHAR) % MAXCHAR + UPPERCASE_A);
        } else if (charCode >= LOWERCASE_A && charCode <= LOWERCASE_Z) {
            return String.fromCharCode((charCode - LOWERCASE_A + shiftAmount
-             + 26) % 26 + LOWERCASE_A);
+             + MAXCHAR) % MAXCHAR + LOWERCASE_A);
        }
        return char; // Non-alphabet characters remain unchanged
    }

@@ -4,9 +4,12 @@ function* VigenereEncoder(key) {
    const UPPERCASE_Z = 90;
    const LOWERCASE_A = 97;
    const LOWERCASE_Z = 122;
-   
+   const MAXCHAR = 26;
+
    const offsets = Array.from(key.toLowerCase()).map(char => char.charCodeAt(0)
     - LOWERCASE_A + 1);
+
+    let offsetIndex = 0;
 
    yield {
        encode: (str) => applyVigenereCipher(str, offsets, 1),
@@ -14,7 +17,6 @@ function* VigenereEncoder(key) {
    };
 
    function applyVigenereCipher(str, offsets, direction) {
-       let offsetIndex = 0;
        return str.split('').map(char => {
            const shiftAmount = offsets[offsetIndex] * direction;
            offsetIndex = (offsetIndex + 1) % offsets.length;
@@ -26,10 +28,10 @@ function* VigenereEncoder(key) {
        const charCode = char.charCodeAt(0);
        if (charCode >= UPPERCASE_A && charCode <= UPPERCASE_Z) {
            return String.fromCharCode((charCode - UPPERCASE_A + shiftAmount
-             + 26) % 26 + UPPERCASE_A);
+             + MAXCHAR) % MAXCHAR + UPPERCASE_A);
        } else if (charCode >= LOWERCASE_A && charCode <= LOWERCASE_Z) {
            return String.fromCharCode((charCode - LOWERCASE_A + shiftAmount
-             + 26) % 26 + LOWERCASE_A);
+             + MAXCHAR) % MAXCHAR + LOWERCASE_A);
        }
        return char;
    }
