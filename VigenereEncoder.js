@@ -1,40 +1,51 @@
 function* VigenereEncoder(key) {
-   // Constants for ASCII values of uppercase and lowercase letters
-   const UPPERCASE_A = 65;
-   const UPPERCASE_Z = 90;
-   const LOWERCASE_A = 97;
-   const LOWERCASE_Z = 122;
-   const MAXCHAR = 26;
+  // Validate key
+  if (!/^[a-zA-Z]+$/.test(key)) {
+    throw new Error('Key must be a single word containing only alphabetic characters.');
+  }
 
-   const offsets = Array.from(key.toLowerCase()).map(char => char.charCodeAt(0)
-    - LOWERCASE_A + 1);
+  const keyOffsets = key.toLowerCase().split('').map(char => char.charCodeAt(0) - 'a'.charCodeAt(0) + 1);
 
-    let offsetIndex = 0;
+  // Generator function for cycling offsets
+  function* offsetIterator(offsets) {
+    let index = 0;
+    while (true) {
+      yield offsets[index % offsets.length];
+      index++;
+    }
+  }
 
-   yield {
-       encode: (str) => applyVigenereCipher(str, offsets, 1),
-       decode: (str) => applyVigenereCipher(str, offsets, -1)
-   };
+  const iterator = offsetIterator(keyOffsets);
 
-   function applyVigenereCipher(str, offsets, direction) {
-       return str.split('').map(char => {
-           const shiftAmount = offsets[offsetIndex] * direction;
-           offsetIndex = (offsetIndex + 1) % offsets.length;
-           return shiftChar(char, shiftAmount);
-       }).join('');
-   }
+  // Function to shift characters
+  function shiftChar(char, shift) {
+    const base = char >= 'a' && char <= 'z' ? 'a'.charCodeAt(0) : 'A'.charCodeAt(0);
+    const alphabetSize = 26;
+    return String.fromCharCode(((char.charCodeAt(0) - base + shift + alphabetSize) % alphabetSize) + base);
+  }
 
-   function shiftChar(char, shiftAmount) {
-       const charCode = char.charCodeAt(0);
-       if (charCode >= UPPERCASE_A && charCode <= UPPERCASE_Z) {
-           return String.fromCharCode((charCode - UPPERCASE_A + shiftAmount
-             + MAXCHAR) % MAXCHAR + UPPERCASE_A);
-       } else if (charCode >= LOWERCASE_A && charCode <= LOWERCASE_Z) {
-           return String.fromCharCode((charCode - LOWERCASE_A + shiftAmount
-             + MAXCHAR) % MAXCHAR + LOWERCASE_A);
-       }
-       return char;
-   }
+  yield {
+    encode: function (text) {
+      const encodeIterator = offsetIterator(keyOffsets); // Reset iterator for encoding
+      return text.split('').map(char => {
+        if (/[a-zA-Z]/.test(char)) {
+          const shift = encodeIterator.next().value;
+          return shiftChar(char, shift);
+        }
+        return char; // Leave non-alphabetic characters unchanged
+      }).join('');
+    },
+    decode: function (text) {
+      const decodeIterator = offsetIterator(keyOffsets); // Reset iterator for decoding
+      return text.split('').map(char => {
+        if (/[a-zA-Z]/.test(char)) {
+          const shift = decodeIterator.next().value;
+          return shiftChar(char, -shift);
+        }
+        return char; // Leave non-alphabetic characters unchanged
+      }).join('');
+    }
+  };
 }
 
 module.exports = VigenereEncoder;

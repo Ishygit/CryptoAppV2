@@ -1,6 +1,8 @@
 function* RotEncoder(key) {
    const offset = parseInt(key, 10);
-   if (isNaN(offset) || offset <= 0) throw `Bad offset ${key}`;
+   if (isNaN(offset) || offset <= 0) {
+    throw new Error (`Bad offset: ${key}. Offset must be a positive number.`)
+   };
 
 // Constants for ASCII values of uppercase and lowercase letters
    const UPPERCASE_A = 65;
